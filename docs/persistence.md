@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS entry_content (
   entry_id         TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   analysis         TEXT NOT NULL DEFAULT '',
   article_content  TEXT,              -- NULL for books
+  url              TEXT,              -- source URL; NULL for books
   updated_at       TEXT NOT NULL      -- ISO-8601 timestamp
 );
 ```
@@ -100,8 +101,33 @@ The settings page will call `invoke("set_api_key", { provider, key })` on save a
 
 ## Implementation Order
 
-1. Scaffold all UI screens and components (current focus)
-2. Add `@tauri-apps/plugin-sql`, write migrations, implement `src/lib/db/`
+1. ✅ Scaffold all UI screens and components
+2. ✅ Add `@tauri-apps/plugin-sql`, write migrations, implement `src/lib/db/`
 3. Add `keyring` crate, implement Tauri commands, wire settings page
 4. Replace all stub data with live DB reads/writes
+
+## Implemented Modules
+
+### `src/lib/db/client.ts`
+
+Opens and caches the SQLite connection. All other db modules go through `getDb()` — nothing calls the plugin directly.
+
+### `src/lib/db/user.ts`
+
+| Function | Description |
+|---|---|
+| `getUser()` | Returns the single user profile row (always present — seeded by migration) |
+| `updateUser(user)` | Updates first and last name |
+
+### `src/lib/db/entries.ts`
+
+| Function | Description |
+|---|---|
+| `listEntries()` | All entries, newest-first, with content joined |
+| `getEntry(id)` | Single entry by id, or `null` |
+| `createEntry(input)` | Inserts into `entries` + `entry_content` in a transaction |
+| `updateEntry(entry)` | Updates all mutable fields in a transaction (`id` and `createdAt` are immutable) |
+| `deleteEntry(id)` | Deletes the entry row; `entry_content` is removed via `ON DELETE CASCADE` |
+
+IDs are generated with `uuid` (v4) on the frontend. Both tables are always written atomically — if either statement fails the transaction rolls back.
 </thinking>

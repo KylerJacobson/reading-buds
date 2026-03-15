@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Alert,
   AppBar,
   Box,
+  CircularProgress,
   Container,
   Fab,
   Grid,
@@ -13,49 +15,25 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { BookCard } from "../components/BookCard";
+import { listEntries } from "../lib/db/entries";
 import { ReadingEntry } from "../types/entry";
-
-/** Stub data — replace with real data fetching once the backend is wired up. */
-const STUB_ENTRIES: ReadingEntry[] = [
-  {
-    id: "1",
-    type: "book",
-    title: "The Pragmatic Programmer",
-    author: "David Thomas & Andrew Hunt",
-    analysis: "",
-  },
-  {
-    id: "2",
-    type: "article",
-    title: "Why Rust is the Future of Systems Programming",
-    author: "Jane Doe",
-    analysis: "",
-    articleContent: "",
-  },
-  {
-    id: "3",
-    type: "book",
-    title: "Designing Data-Intensive Applications",
-    author: "Martin Kleppmann",
-    analysis: "",
-  },
-];
 
 /**
  * The main landing page. Lists existing reading entries and exposes a FAB
- * to create a new entry. Selection/creation handlers are stubs for now.
+ * to create a new entry.
  */
 export function HomePage() {
   const navigate = useNavigate();
-  const [entries] = useState<ReadingEntry[]>(STUB_ENTRIES);
+  const [entries, setEntries] = useState<ReadingEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleEntryClick(entry: ReadingEntry) {
-    navigate(`/entry/${entry.id}`);
-  }
-
-  function handleAddEntry() {
-    navigate("/entry/new");
-  }
+  useEffect(() => {
+    listEntries()
+      .then(setEntries)
+      .catch((err) => setError(String(err)))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default", pb: 10 }}>
@@ -74,24 +52,44 @@ export function HomePage() {
       </AppBar>
 
       <Container maxWidth="sm" sx={{ pt: 2 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {entries.length} {entries.length === 1 ? "entry" : "entries"}
-        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Failed to load entries: {error}
+          </Alert>
+        )}
 
-        <Grid container spacing={2}>
-          {entries.map((entry) => (
-            <Grid key={entry.id} size={{ xs: 12 }}>
-              <BookCard entry={entry} onClick={handleEntryClick} />
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", pt: 8 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {entries.length} {entries.length === 1 ? "entry" : "entries"}
+            </Typography>
+
+            <Grid container spacing={2}>
+              {entries.map((entry) => (
+                <Grid key={entry.id} size={{ xs: 12 }}>
+                  <BookCard
+                    entry={entry}
+                    onClick={(e) => navigate(`/entry/${e.id}`)}
+                    onDelete={(e) =>
+                      setEntries((prev) => prev.filter((x) => x.id !== e.id))
+                    }
+                  />
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          </>
+        )}
       </Container>
 
       {/* Floating action button — fixed to the bottom-right */}
       <Fab
         color="primary"
         aria-label="Add new entry"
-        onClick={handleAddEntry}
+        onClick={() => navigate("/entry/new")}
         sx={{ position: "fixed", bottom: 24, right: 24 }}
       >
         <AddIcon />

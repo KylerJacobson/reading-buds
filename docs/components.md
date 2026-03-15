@@ -11,20 +11,45 @@ Displays a single reading entry (book or article) as a Material UI `Card`.
 | Prop | Type | Required | Description |
 |---|---|---|---|
 | `entry` | `ReadingEntry` | Yes | The reading entry to display |
-| `onClick` | `(entry: ReadingEntry) => void` | No | Called when the card is tapped/clicked |
+| `onClick` | `(entry: ReadingEntry) => void` | No | Called when the card body is tapped/clicked |
+| `onDelete` | `(entry: ReadingEntry) => void` | No | Called after the entry has been deleted from the DB |
 
 ### Displays
 
 - Entry type icon (book or article) + colour-coded chip
 - Title and author (both truncate with ellipsis on overflow)
+- Delete icon button (separate tap target from the card body); opens a `ConfirmDialog` before deleting
 
 ### Usage
 
 ```tsx
 import { BookCard } from "../components/BookCard";
 
-<BookCard entry={myEntry} onClick={(e) => console.log(e.id)} />
+<BookCard
+  entry={myEntry}
+  onClick={(e) => navigate(`/entry/${e.id}`)}
+  onDelete={(e) => setEntries((prev) => prev.filter((x) => x.id !== e.id))}
+/>
 ```
+
+---
+
+## ConfirmDialog
+
+**Path:** `src/components/ConfirmDialog/ConfirmDialog.tsx`
+
+Generic confirmation dialog for destructive or irreversible actions.
+
+### Props
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `open` | `boolean` | Yes | Controls dialog visibility |
+| `title` | `string` | Yes | Dialog heading |
+| `message` | `string` | Yes | Body text describing the action |
+| `confirmLabel` | `string` | No | Label for the confirm button (default: `"Delete"`) |
+| `onConfirm` | `() => void` | Yes | Called when the user confirms |
+| `onCancel` | `() => void` | Yes | Called when the user cancels or closes |
 
 ---
 
@@ -62,12 +87,14 @@ Entries represent works the user has **already finished reading**.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | `string` | Yes | Unique identifier |
+| `id` | `string` | Yes | UUID, generated on create |
 | `type` | `"book" \| "article"` | Yes | Entry category |
 | `title` | `string` | Yes | Title of the work |
 | `author` | `string` | Yes | Author name(s) |
+| `createdAt` | `string` | Yes | ISO-8601 timestamp set on create |
 | `analysis` | `string` | Yes | The user's written analysis or review |
-| `articleContent` | `string` | No | Raw article text pasted by the user — only used when `type === "article"` |
+| `articleContent` | `string` | No | Raw article text — only used when `type === "article"` |
+| `url` | `string` | No | Source URL — only used when `type === "article"` |
 
 ### `User`
 

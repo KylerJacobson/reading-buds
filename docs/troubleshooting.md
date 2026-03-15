@@ -27,3 +27,21 @@ cargo clean --manifest-path src-tauri/Cargo.toml
 ```
 
 Then re-run `pnpm tauri dev`. The full recompile will take longer than usual but will succeed.
+
+---
+
+## Database
+
+### `cannot commit - no transaction is active`
+
+**Symptom:**
+
+A database write throws: `error returned from database: (code: 1) cannot commit - no transaction is active`
+
+**Cause:**
+
+`tauri-plugin-sql` uses a connection pool. Each call to `db.execute()` may acquire a different connection, so `BEGIN`, the statements, and `COMMIT` do not share the same connection context — the transaction is immediately lost after the `BEGIN` call.
+
+**Fix:**
+
+Do not use manual `BEGIN` / `COMMIT` / `ROLLBACK` statements via separate `execute` calls. Issue each SQL statement directly and let SQLite auto-commit per statement. For multi-statement operations, accept that they are not atomic at the JS layer.

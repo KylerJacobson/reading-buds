@@ -67,13 +67,11 @@ Lets the user manage their profile and API keys for each supported AI provider.
 | `user` | `User` | First and last name |
 | `keyStatus` | `ApiKeyStatus` | Whether a key is saved per provider (boolean, not the key value) |
 
-### Stub Handlers (to be implemented)
+### Data
 
-| Handler | Next step |
-|---|---|
-| `handleProfileSave()` | Write to SQLite via `src/lib/db/user.ts` |
-| `handleApiKeySave(provider, key)` | `invoke("set_api_key", { provider, key })` |
-| `handleApiKeyClear(provider)` | `invoke("delete_api_key", { provider })` |
+- Profile is loaded from SQLite on mount via `getUser()`.
+- `handleProfileSave()` calls `updateUser()` on every field blur.
+- API key handlers remain stubbed pending the Keychain implementation.
 
 ---
 
@@ -111,8 +109,7 @@ The AppBar save icon is disabled until both title and author are non-empty. Savi
 | `mode` | `"view" \| "edit"` | Current display mode |
 | `draft` | `ReadingEntry` | Working copy of the entry being viewed or edited |
 
-### Stub Handlers (to be implemented)
+### Data
 
-| Handler | Next step |
-|---|---|
-| `handleSave()` | Create or update entry via `src/lib/db/entries.ts` |
+- Existing entries are loaded from SQLite on mount via `getEntry(id)`.
+- `handleSave()` calls `createEntry()` for new entries (then navigates to the new `/entry/:id`) or `updateEntry()` for edits.
