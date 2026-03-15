@@ -45,3 +45,19 @@ A database write throws: `error returned from database: (code: 1) cannot commit 
 **Fix:**
 
 Do not use manual `BEGIN` / `COMMIT` / `ROLLBACK` statements via separate `execute` calls. Issue each SQL statement directly and let SQLite auto-commit per statement. For multi-statement operations, accept that they are not atomic at the JS layer.
+
+---
+
+### `set_password` succeeds but `get_password` returns `NoEntry` (`keyring` crate)
+
+**Symptom:**
+
+`set_api_key` returns `Ok(())` but an immediate `get_api_key` call returns `found=false`. Keys never persist.
+
+**Cause:**
+
+`keyring` v3 has a bug on macOS where `set_password` stores entries with attributes that don't match the query used by `get_password`, so entries are written but never found.
+
+**Fix:**
+
+Use `keyring = "2"` in `Cargo.toml`. The v2 API is identical except the delete method is `delete_password()` instead of `delete_credential()`.

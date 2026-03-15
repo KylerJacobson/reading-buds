@@ -76,26 +76,31 @@ src/lib/db/
 
 Writes to the macOS Keychain / iOS Secure Enclave. API keys never cross into the frontend — they are read, written, and deleted exclusively through Tauri commands in Rust.
 
-### Planned Tauri Commands
+### Tauri Commands
 
-```rust
-// src-tauri/src/keychain.rs (planned)
+**File:** `src-tauri/src/keychain.rs`
 
-#[tauri::command]
-async fn set_api_key(provider: String, key: String) -> Result<(), String>
+| Command | Signature | Description |
+|---|---|---|
+| `set_api_key` | `(provider, key) → Result<()>` | Writes key to OS Keychain |
+| `get_api_key` | `(provider) → Result<Option<String>>` | Returns the key value, or null if not set |
+| `delete_api_key` | `(provider) → Result<()>` | Removes key; no-op if not found |
 
-#[tauri::command]
-async fn get_api_key(provider: String) -> Result<Option<String>, String>
+`provider` is one of: `"anthropic"`, `"google"`, `"openai"`. Keys are stored under service name `"reading-buddy"`.
 
-#[tauri::command]
-async fn delete_api_key(provider: String) -> Result<(), String>
-```
+> **Note:** `get_api_key` returns the full key value to the frontend so the Settings page can display it. Keys are sourced from the OS Keychain and are never written to SQLite or disk by this app.
 
-`provider` will be one of: `"anthropic"`, `"google"`, `"openai"`.
+### Frontend Module
 
-### Frontend Usage (planned)
+**File:** `src/lib/keychain.ts`
 
-The settings page will call `invoke("set_api_key", { provider, key })` on save and `invoke("delete_api_key", { provider })` on clear. It will **never** call `get_api_key` to display a stored key — the UI will only indicate whether a key is set (boolean), not reveal its value.
+Thin wrappers around `invoke()` — mirrors the `src/lib/db/` pattern. UI code imports from here, never calls `invoke` directly.
+
+| Function | Description |
+|---|---|
+| `setApiKey(provider, key)` | Saves key to Keychain |
+| `getApiKey(provider)` | Returns the key value or `null` |
+| `deleteApiKey(provider)` | Removes key from Keychain |
 
 ---
 
@@ -103,8 +108,8 @@ The settings page will call `invoke("set_api_key", { provider, key })` on save a
 
 1. ✅ Scaffold all UI screens and components
 2. ✅ Add `@tauri-apps/plugin-sql`, write migrations, implement `src/lib/db/`
-3. Add `keyring` crate, implement Tauri commands, wire settings page
-4. Replace all stub data with live DB reads/writes
+3. ✅ Add `keyring` crate, implement Tauri commands, wire settings page
+4. ✅ Replace all stub data with live DB reads/writes
 
 ## Implemented Modules
 

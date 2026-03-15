@@ -65,15 +65,15 @@ A single API key row used in `SettingsPage`. Handles the show/hide toggle and sa
 |---|---|---|---|
 | `provider` | `ApiKeyProvider` | Yes | Which provider this field manages |
 | `label` | `string` | Yes | Display name shown above the field |
-| `isSaved` | `boolean` | Yes | Whether a key is currently stored in the Keychain |
+| `savedValue` | `string \| null` | Yes | The currently stored key value, or `null` if none |
 | `onSave` | `(provider, key) => void` | Yes | Called with the raw key when the user clicks Save |
 | `onClear` | `(provider) => void` | Yes | Called when the user clicks Clear |
 
 ### Behaviour
 
-- When `isSaved` is `false`: renders a password input with a visibility toggle and a Save button.
-- When `isSaved` is `true`: renders a "Key saved" chip with Replace and Clear buttons. The key value is **never fetched or displayed**.
-- Replace puts the field back into input mode without clearing the saved key until Save is confirmed.
+- When `savedValue` is `null`: renders a password input with a visibility toggle and a Save button.
+- When `savedValue` is set: renders the key in a read-only masked field with a visibility toggle, plus Replace and Clear buttons.
+- Replace enters input mode without clearing the stored key until Save is confirmed.
 
 ---
 
