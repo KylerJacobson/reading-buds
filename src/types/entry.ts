@@ -10,4 +10,11 @@ export interface ReadingEntry {
   type: EntryType;
   title: string;
   author: string;
+  /** The user's written analysis / review of the work. */
+  analysis: string;
+  /**
+   * The raw article text pasted in by the user.
+   * Only relevant when type === "article".
+   */
+  articleContent?: string;
 }

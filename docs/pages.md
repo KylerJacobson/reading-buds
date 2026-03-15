@@ -7,6 +7,8 @@ The app uses `HashRouter` from React Router. `HashRouter` is required because Ta
 | Route | Page |
 |---|---|
 | `/` | `HomePage` |
+| `/entry/new` | `EntryPage` (create mode) |
+| `/entry/:id` | `EntryPage` (view/edit mode) |
 | `/settings` | `SettingsPage` |
 
 ---
@@ -29,12 +31,13 @@ The main landing screen. Shows the user's library of reading entries and provide
 |---|---|---|
 | `entries` | `ReadingEntry[]` | List of reading entries to display |
 
-### Stub Handlers (to be implemented)
+### Navigation
 
-| Handler | Triggered by | Next step |
-|---|---|---|
-| `handleEntryClick(entry)` | Tapping a `BookCard` | Navigate to entry detail page |
-| `handleAddEntry()` | Tapping the FAB (`+`) | Open a create-entry dialog or navigate to a create page |
+| Action | Destination |
+|---|---|
+| Tap a `BookCard` | `/entry/:id` |
+| Tap the FAB (`+`) | `/entry/new` |
+| Tap the settings icon | `/settings` |
 
 ### Layout notes
 
@@ -71,3 +74,45 @@ Lets the user manage their profile and API keys for each supported AI provider.
 | `handleProfileSave()` | Write to SQLite via `src/lib/db/user.ts` |
 | `handleApiKeySave(provider, key)` | `invoke("set_api_key", { provider, key })` |
 | `handleApiKeyClear(provider)` | `invoke("delete_api_key", { provider })` |
+
+---
+
+## EntryPage
+
+**Path:** `src/pages/EntryPage.tsx`
+
+Full-screen detail view for a single reading entry (book or article). Handles both creating new entries and viewing/editing existing ones.
+
+### Routes
+
+| URL | Behaviour |
+|---|---|
+| `/entry/new` | Starts in **edit mode** with blank fields |
+| `/entry/:id` | Starts in **view mode** with the matched entry |
+
+### Modes
+
+**View mode** — read-only display of the entry. Layout top-to-bottom:
+1. Type chip, title, author
+2. *(Articles only)* Collapsible accordion showing the raw article text
+3. "My Analysis" section showing the user's written analysis
+
+**Edit mode** — all fields become inputs. Layout top-to-bottom:
+1. Type toggle (Book / Article), title field, author field
+2. *(Articles only)* Collapsible accordion containing a multiline textarea for the article text
+3. Multiline textarea for the analysis
+
+The AppBar save icon is disabled until both title and author are non-empty. Saving returns to view mode.
+
+### State
+
+| State | Type | Description |
+|---|---|---|
+| `mode` | `"view" \| "edit"` | Current display mode |
+| `draft` | `ReadingEntry` | Working copy of the entry being viewed or edited |
+
+### Stub Handlers (to be implemented)
+
+| Handler | Next step |
+|---|---|
+| `handleSave()` | Create or update entry via `src/lib/db/entries.ts` |

@@ -60,12 +60,14 @@ A single API key row used in `SettingsPage`. Handles the show/hide toggle and sa
 
 Entries represent works the user has **already finished reading**.
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | `string` | Unique identifier |
-| `type` | `"book" \| "article"` | Entry category |
-| `title` | `string` | Title of the work |
-| `author` | `string` | Author name(s) |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | `string` | Yes | Unique identifier |
+| `type` | `"book" \| "article"` | Yes | Entry category |
+| `title` | `string` | Yes | Title of the work |
+| `author` | `string` | Yes | Author name(s) |
+| `analysis` | `string` | Yes | The user's written analysis or review |
+| `articleContent` | `string` | No | Raw article text pasted by the user — only used when `type === "article"` |
 
 ### `User`
 

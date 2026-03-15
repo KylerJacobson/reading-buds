@@ -40,12 +40,14 @@ CREATE TABLE IF NOT EXISTS entries (
   created_at TEXT NOT NULL           -- ISO-8601 timestamp
 );
 
--- Long-form content attached to an entry
-CREATE TABLE IF NOT EXISTS reviews (
-  id         TEXT PRIMARY KEY,       -- UUID
-  entry_id   TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  body       TEXT NOT NULL,          -- full article text or book review
-  created_at TEXT NOT NULL
+-- Long-form content attached to an entry.
+-- article_content is only populated for article entries.
+CREATE TABLE IF NOT EXISTS entry_content (
+  id               TEXT PRIMARY KEY,  -- UUID, same as entry id (1:1)
+  entry_id         TEXT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  analysis         TEXT NOT NULL DEFAULT '',
+  article_content  TEXT,              -- NULL for books
+  updated_at       TEXT NOT NULL      -- ISO-8601 timestamp
 );
 ```
 

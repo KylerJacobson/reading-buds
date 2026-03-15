@@ -22,18 +22,22 @@ const STUB_ENTRIES: ReadingEntry[] = [
     type: "book",
     title: "The Pragmatic Programmer",
     author: "David Thomas & Andrew Hunt",
+    analysis: "",
   },
   {
     id: "2",
     type: "article",
     title: "Why Rust is the Future of Systems Programming",
     author: "Jane Doe",
+    analysis: "",
+    articleContent: "",
   },
   {
     id: "3",
     type: "book",
     title: "Designing Data-Intensive Applications",
     author: "Martin Kleppmann",
+    analysis: "",
   },
 ];
 
@@ -46,13 +50,11 @@ export function HomePage() {
   const [entries] = useState<ReadingEntry[]>(STUB_ENTRIES);
 
   function handleEntryClick(entry: ReadingEntry) {
-    // TODO: navigate to entry detail page
-    console.log("Entry selected:", entry.id);
+    navigate(`/entry/${entry.id}`);
   }
 
   function handleAddEntry() {
-    // TODO: open create-entry dialog or navigate to a create page
-    console.log("Add entry clicked");
+    navigate("/entry/new");
   }
 
   return (

@@ -1,5 +1,6 @@
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import { EntryPage } from "./pages/EntryPage";
 import { HomePage } from "./pages/HomePage";
 import { SettingsPage } from "./pages/SettingsPage";
 
@@ -21,6 +22,7 @@ function App() {
       <HashRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/entry/:id" element={<EntryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </HashRouter>
