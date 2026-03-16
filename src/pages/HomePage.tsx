@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import GroupsIcon from "@mui/icons-material/Groups";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { BookCard } from "../components/BookCard";
 import { listEntries } from "../lib/db/entries";
@@ -42,6 +43,9 @@ export function HomePage() {
           <Typography variant="h6" component="h1" fontWeight={700} sx={{ flexGrow: 1 }}>
             My Library
           </Typography>
+          <IconButton aria-label="Reading clubs" onClick={() => navigate("/clubs")}>
+            <GroupsIcon />
+          </IconButton>
           <IconButton
             aria-label="Open settings"
             onClick={() => navigate("/settings")}

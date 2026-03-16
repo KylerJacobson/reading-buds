@@ -6,16 +6,22 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                // Migrations live in src-tauri/migrations/ and are applied in
-                // filename order on first launch and whenever a new file is added.
                 .add_migrations(
                     "sqlite:reading-buddy.db",
-                    vec![tauri_plugin_sql::Migration {
-                        version: 1,
-                        description: "init",
-                        sql: include_str!("../migrations/0001_init.sql"),
-                        kind: tauri_plugin_sql::MigrationKind::Up,
-                    }],
+                    vec![
+                        tauri_plugin_sql::Migration {
+                            version: 1,
+                            description: "init",
+                            sql: include_str!("../migrations/0001_init.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                        tauri_plugin_sql::Migration {
+                            version: 2,
+                            description: "reading_clubs",
+                            sql: include_str!("../migrations/0002_reading_clubs.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                    ],
                 )
                 .build(),
         )

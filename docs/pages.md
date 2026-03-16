@@ -10,6 +10,12 @@ The app uses `HashRouter` from React Router. `HashRouter` is required because Ta
 | `/entry/new` | `EntryPage` (create mode) |
 | `/entry/:id` | `EntryPage` (view/edit mode) |
 | `/settings` | `SettingsPage` |
+| `/clubs` | `ClubsPage` |
+| `/clubs/new` | `ClubPage` (create mode) |
+| `/clubs/:id` | `ClubPage` (view/edit mode) |
+| `/members` | `MembersPage` |
+| `/members/new` | `MemberPage` (create mode) |
+| `/members/:id` | `MemberPage` (view/edit mode) |
 
 ---
 
@@ -37,11 +43,12 @@ The main landing screen. Shows the user's library of reading entries and provide
 |---|---|
 | Tap a `BookCard` | `/entry/:id` |
 | Tap the FAB (`+`) | `/entry/new` |
+| Tap the clubs icon | `/clubs` |
 | Tap the settings icon | `/settings` |
 
 ### Layout notes
 
-- An `AppBar` across the top holds the page title (left) and settings icon (right).
+- An `AppBar` across the top holds the page title (left), clubs icon, and settings icon (right).
 - `Container maxWidth="sm"` keeps content readable on both desktop and mobile.
 - The FAB uses `position: fixed` so it stays anchored to the viewport regardless of scroll position.
 - Bottom padding (`pb: 10`) prevents the last card from being hidden behind the FAB on mobile.
@@ -92,13 +99,16 @@ Full-screen detail view for a single reading entry (book or article). Handles bo
 
 **View mode** — read-only display of the entry. Layout top-to-bottom:
 1. Type chip, title, author
-2. *(Articles only)* Collapsible accordion showing the raw article text
-3. "My Analysis" section showing the user's written analysis
+2. Reading club chip (if an associated club is set)
+3. *(Articles only)* Collapsible accordion showing the raw article text
+4. "My Analysis" section showing the user's written analysis
 
 **Edit mode** — all fields become inputs. Layout top-to-bottom:
 1. Type toggle (Book / Article), title field, author field
-2. *(Articles only)* Collapsible accordion containing a multiline textarea for the article text
-3. Multiline textarea for the analysis
+2. *(Articles only)* URL field
+3. Reading Club selector (dropdown — "None" or any club name)
+4. *(Articles only)* Collapsible accordion containing a multiline textarea for the article text
+5. Multiline textarea for the analysis
 
 The AppBar save icon is disabled until both title and author are non-empty. Saving returns to view mode.
 
@@ -107,9 +117,127 @@ The AppBar save icon is disabled until both title and author are non-empty. Savi
 | State | Type | Description |
 |---|---|---|
 | `mode` | `"view" \| "edit"` | Current display mode |
-| `draft` | `ReadingEntry` | Working copy of the entry being viewed or edited |
+| `draft` | `ReadingEntry \| CreateEntryInput` | Working copy of the entry being viewed or edited |
+| `clubs` | `Club[]` | All clubs, loaded unconditionally for the club selector |
 
 ### Data
 
 - Existing entries are loaded from SQLite on mount via `getEntry(id)`.
+- Clubs are loaded in a separate `useEffect` (always runs, for both new and existing entries).
 - `handleSave()` calls `createEntry()` for new entries (then navigates to the new `/entry/:id`) or `updateEntry()` for edits.
+
+---
+
+## ClubsPage
+
+**Path:** `src/pages/ClubsPage.tsx`
+
+Lists all reading clubs. Provides navigation to the `ClubPage` for each club and a FAB to create a new one. Also exposes a toolbar button to navigate to `MembersPage`.
+
+### State
+
+| State | Type | Description |
+|---|---|---|
+| `clubs` | `Club[]` | All clubs loaded from the database |
+| `loading` | `boolean` | Loading indicator while fetching |
+| `error` | `string \| null` | Error message if fetch fails |
+
+### Navigation
+
+| Action | Destination |
+|---|---|
+| Tap a club card | `/clubs/:id` |
+| Tap the FAB (`+`) | `/clubs/new` |
+| Tap the members icon | `/members` |
+| Tap back | previous route |
+
+---
+
+## ClubPage
+
+**Path:** `src/pages/ClubPage.tsx`
+
+Detail view for a single reading club. Handles create (`/clubs/new`) and view/edit (`/clubs/:id`) modes.
+
+### Modes
+
+**View mode** — shows club name and member list. Each member shows their name (linked to `MemberPage`) and model chip.
+
+**Edit mode** — club name becomes a text input. The save icon is disabled when the name is empty.
+
+Members can be added (from the global members list) or removed via icon buttons. The "Add member" dialog filters out members already in the club.
+
+### State
+
+| State | Type | Description |
+|---|---|---|
+| `mode` | `"view" \| "edit"` | Current display mode |
+| `club` | `ClubWithMembers \| null` | Loaded club with its member list |
+| `name` | `string` | Editable club name field |
+| `allMembers` | `Member[]` | Available members shown in the add-member dialog |
+| `confirmDeleteOpen` | `boolean` | Controls the delete confirmation dialog |
+| `addMemberOpen` | `boolean` | Controls the add-member dialog |
+
+### Navigation
+
+| Action | Destination |
+|---|---|
+| Tap a member name | `/members/:id` |
+| Tap back | previous route |
+| After delete | `/clubs` |
+| After create save | `/clubs/:newId` (replaces history) |
+
+---
+
+## MembersPage
+
+**Path:** `src/pages/MembersPage.tsx`
+
+Lists all global members (LLM personas). Each card shows the member's name and assigned model. Provides a FAB to create a new member.
+
+### State
+
+| State | Type | Description |
+|---|---|---|
+| `members` | `Member[]` | All members loaded from the database |
+| `loading` | `boolean` | Loading indicator while fetching |
+| `error` | `string \| null` | Error message if fetch fails |
+
+### Navigation
+
+| Action | Destination |
+|---|---|
+| Tap a member card | `/members/:id` |
+| Tap the FAB (`+`) | `/members/new` |
+| Tap back | previous route |
+
+---
+
+## MemberPage
+
+**Path:** `src/pages/MemberPage.tsx`
+
+Detail view for a single club member (LLM persona). Handles create (`/members/new`) and view/edit (`/members/:id`) modes.
+
+### Modes
+
+**View mode** — shows name, assigned model label, and bio (system prompt).
+
+**Edit mode** — name text field, grouped model `Select` (grouped by provider), and multiline bio field.
+
+### State
+
+| State | Type | Description |
+|---|---|---|
+| `mode` | `"view" \| "edit"` | Current display mode |
+| `member` | `Member \| null` | Loaded member data |
+| `draft` | `{ name, bio, model }` | Editable copy of member fields |
+| `confirmDeleteOpen` | `boolean` | Controls the delete confirmation dialog |
+
+### Navigation
+
+| Action | Destination |
+|---|---|
+| Tap back | previous route |
+| After delete | `/members` (replaces history) |
+| After create save | `/members/:newId` (replaces history) |

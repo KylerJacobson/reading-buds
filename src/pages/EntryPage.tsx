@@ -11,8 +11,12 @@ import {
   CircularProgress,
   Container,
   Divider,
+  FormControl,
   IconButton,
+  InputLabel,
   Link,
+  MenuItem,
+  Select,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -24,12 +28,15 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import GroupsIcon from "@mui/icons-material/Groups";
 import SaveIcon from "@mui/icons-material/Save";
 import ArticleIcon from "@mui/icons-material/Article";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { CreateEntryInput, EntryType, ReadingEntry } from "../types/entry";
 import { createEntry, deleteEntry, getEntry, updateEntry } from "../lib/db/entries";
+import { listClubs } from "../lib/db/clubs";
+import type { Club } from "../types/club";
 
 const EMPTY_DRAFT: CreateEntryInput = {
   type: "book",
@@ -62,6 +69,7 @@ export function EntryPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [clubs, setClubs] = useState<Club[]>([]);
 
   // Load existing entry from DB when not in create mode.
   useEffect(() => {
@@ -77,6 +85,13 @@ export function EntryPage() {
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
   }, [id, isNew]);
+
+  // Clubs are needed in both create and edit mode — load unconditionally.
+  useEffect(() => {
+    listClubs().then(setClubs).catch(() => {
+      // Non-fatal: club selector will just be empty
+    });
+  }, []);
 
   async function handleSave() {
     setSaving(true);
@@ -178,9 +193,9 @@ export function EntryPage() {
         )}
 
         {isViewMode ? (
-          <ViewContent entry={draft as ReadingEntry} />
+          <ViewContent entry={draft as ReadingEntry} clubs={clubs} />
         ) : (
-          <EditContent draft={draft} setField={setField} />
+          <EditContent draft={draft} setField={setField} clubs={clubs} />
         )}
       </Container>
 
@@ -199,7 +214,9 @@ export function EntryPage() {
 // Sub-components — kept in the same file since they're only used here.
 // ---------------------------------------------------------------------------
 
-function ViewContent({ entry }: { entry: ReadingEntry }) {
+function ViewContent({ entry, clubs }: { entry: ReadingEntry; clubs: Club[] }) {
+  const associatedClub = entry.clubId ? clubs.find((c) => c.id === entry.clubId) : undefined;
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {/* Header */}
@@ -229,6 +246,17 @@ function ViewContent({ entry }: { entry: ReadingEntry }) {
           >
             {entry.url}
           </Link>
+        )}
+
+        {/* Reading club chip — only shown when entry is associated with a club */}
+        {associatedClub && (
+          <Chip
+            label={associatedClub.name}
+            size="small"
+            variant="outlined"
+            icon={<GroupsIcon />}
+            sx={{ mt: 1 }}
+          />
         )}
       </Box>
 
@@ -279,9 +307,10 @@ function ViewContent({ entry }: { entry: ReadingEntry }) {
 interface EditContentProps {
   draft: ReadingEntry | CreateEntryInput;
   setField: <K extends keyof ReadingEntry>(key: K, value: ReadingEntry[K]) => void;
+  clubs: Club[];
 }
 
-function EditContent({ draft, setField }: EditContentProps) {
+function EditContent({ draft, setField, clubs }: EditContentProps) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {/* Type toggle */}
@@ -338,6 +367,21 @@ function EditContent({ draft, setField }: EditContentProps) {
           slotProps={{ input: { inputMode: "url" } }}
         />
       )}
+
+      {/* Reading club association */}
+      <FormControl fullWidth variant="outlined">
+        <InputLabel>Reading Club</InputLabel>
+        <Select
+          value={draft.clubId ?? ""}
+          label="Reading Club"
+          onChange={(e) => setField("clubId", e.target.value || undefined)}
+        >
+          <MenuItem value="">None</MenuItem>
+          {clubs.map((c) => (
+            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       <Divider />
 

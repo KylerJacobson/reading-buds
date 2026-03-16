@@ -22,6 +22,8 @@ export interface ReadingEntry {
    * Only relevant when type === "article".
    */
   url?: string;
+  /** ID of the associated reading club, if any. */
+  clubId?: string;
 }
 
 /** Input type for creating a new entry — id and createdAt are generated internally. */

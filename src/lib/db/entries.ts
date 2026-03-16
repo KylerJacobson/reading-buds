@@ -15,6 +15,7 @@ interface EntryRow {
   analysis: string;
   article_content: string | null;
   url: string | null;
+  club_id: string | null;
 }
 
 // Map a raw DB row to the camelCase application type.
@@ -28,6 +29,7 @@ function rowToEntry(row: EntryRow): ReadingEntry {
     analysis: row.analysis,
     articleContent: row.article_content ?? undefined,
     url: row.url ?? undefined,
+    clubId: row.club_id ?? undefined,
   };
 }
 
@@ -43,7 +45,7 @@ export async function listEntries(): Promise<ReadingEntry[]> {
 
   const rows = await db.select<EntryRow[]>(`
     SELECT
-      e.id, e.type, e.title, e.author, e.created_at,
+      e.id, e.type, e.title, e.author, e.created_at, e.club_id,
       COALESCE(ec.analysis, '')   AS analysis,
       ec.article_content,
       ec.url
@@ -64,7 +66,7 @@ export async function getEntry(id: string): Promise<ReadingEntry | null> {
   const rows = await db.select<EntryRow[]>(
     `
     SELECT
-      e.id, e.type, e.title, e.author, e.created_at,
+      e.id, e.type, e.title, e.author, e.created_at, e.club_id,
       COALESCE(ec.analysis, '')   AS analysis,
       ec.article_content,
       ec.url
@@ -96,9 +98,9 @@ export async function createEntry(
   const now = new Date().toISOString();
 
   await db.execute(
-    `INSERT INTO entries (id, type, title, author, created_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [id, input.type, input.title, input.author, now]
+    `INSERT INTO entries (id, type, title, author, created_at, club_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, input.type, input.title, input.author, now, input.clubId ?? null]
   );
 
   await db.execute(
@@ -116,6 +118,7 @@ export async function createEntry(
     analysis: input.analysis ?? "",
     articleContent: input.articleContent,
     url: input.url,
+    clubId: input.clubId,
   };
 }
 
@@ -134,8 +137,8 @@ export async function updateEntry(entry: ReadingEntry): Promise<void> {
   const now = new Date().toISOString();
 
   await db.execute(
-    `UPDATE entries SET type = $1, title = $2, author = $3 WHERE id = $4`,
-    [entry.type, entry.title, entry.author, entry.id]
+    `UPDATE entries SET type = $1, title = $2, author = $3, club_id = $4 WHERE id = $5`,
+    [entry.type, entry.title, entry.author, entry.clubId ?? null, entry.id]
   );
 
   await db.execute(
@@ -144,4 +147,10 @@ export async function updateEntry(entry: ReadingEntry): Promise<void> {
      WHERE entry_id = $5`,
     [entry.analysis ?? "", entry.articleContent ?? null, entry.url ?? null, now, entry.id]
   );
+}
+
+/** Associates an entry with a reading club, or clears the association if clubId is null. */
+export async function setEntryClub(entryId: string, clubId: string | null): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE entries SET club_id = $1 WHERE id = $2", [clubId, entryId]);
 }

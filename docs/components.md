@@ -95,6 +95,37 @@ Entries represent works the user has **already finished reading**.
 | `analysis` | `string` | Yes | The user's written analysis or review |
 | `articleContent` | `string` | No | Raw article text — only used when `type === "article"` |
 | `url` | `string` | No | Source URL — only used when `type === "article"` |
+| `clubId` | `string` | No | ID of the associated reading club, if any |
+
+**Path:** `src/types/club.ts`
+
+### `Member`
+
+A global, reusable LLM persona used in reading club discussions.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | UUID, generated on create |
+| `name` | `string` | Display name of the persona |
+| `bio` | `string` | System prompt / reading persona description |
+| `model` | `string` | LLM model ID (see `KNOWN_MODELS` in `src/lib/models.ts`) |
+| `createdAt` | `string` | ISO-8601 timestamp |
+
+### `Club`
+
+A named, reusable collection of members.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | UUID, generated on create |
+| `name` | `string` | Display name of the club |
+| `createdAt` | `string` | ISO-8601 timestamp |
+
+### `ClubWithMembers`
+
+Extends `Club` with a populated `members: Member[]` array.
+
+**Path:** `src/types/user.ts`
 
 ### `User`
 
@@ -110,3 +141,33 @@ Union type: `"anthropic" | "google" | "openai"`
 ### `ApiKeyStatus`
 
 `Record<ApiKeyProvider, boolean>` — tracks whether a key is saved per provider. Never holds the key value itself.
+
+---
+
+## Model Selector Pattern
+
+**Path:** `src/lib/models.ts`
+
+The `KNOWN_MODELS` array is the single source of truth for available LLM models. It exports:
+
+- `KNOWN_MODELS: KnownModel[]` — full list of models with `id`, `label`, and `provider`
+- `modelLabel(modelId: string): string` — returns the human-readable label for a model ID, falling back to the raw ID for unknown models
+
+When building a model `Select` dropdown, group items by provider using MUI `ListSubheader`:
+
+```tsx
+import { KNOWN_MODELS } from "../lib/models";
+
+<Select value={model} label="Model" onChange={...}>
+  {PROVIDERS.map((provider) => [
+    <ListSubheader key={provider.key}>{provider.label}</ListSubheader>,
+    ...KNOWN_MODELS.filter((m) => m.provider === provider.key).map((m) => (
+      <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
+    )),
+  ])}
+</Select>
+```
+
+When displaying a model name in read-only contexts, use `modelLabel(member.model)` — this gracefully handles retired model IDs that no longer appear in `KNOWN_MODELS`.
+
+**Maintenance:** When a model is retired, mark it deprecated in a code comment rather than removing it from the array. Filter deprecated models out of the creation `Select` but keep them visible in read-only views so existing member records display correctly.
