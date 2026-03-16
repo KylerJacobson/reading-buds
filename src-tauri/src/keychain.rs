@@ -24,6 +24,16 @@ pub fn get_api_key(provider: String) -> Result<Option<String>, String> {
     }
 }
 
+/// Returns the stored API key for internal Rust use (e.g. making API calls).
+/// Not exposed as a Tauri command — use `get_api_key` for frontend access.
+pub fn get_api_key_internal(provider: &str) -> Result<Option<String>, String> {
+    match entry(provider)?.get_password() {
+        Ok(key) => Ok(Some(key)),
+        Err(KeyringError::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Deletes the stored API key for the given provider.
 /// Deleting a key that does not exist is a no-op.
 #[tauri::command]

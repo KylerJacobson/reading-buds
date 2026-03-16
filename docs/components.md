@@ -146,28 +146,52 @@ Union type: `"anthropic" | "google" | "openai"`
 
 ## Model Selector Pattern
 
+### Static fallback list
+
 **Path:** `src/lib/models.ts`
 
-The `KNOWN_MODELS` array is the single source of truth for available LLM models. It exports:
+`KNOWN_MODELS` is a static list used as a fallback for display purposes. It exports:
 
-- `KNOWN_MODELS: KnownModel[]` — full list of models with `id`, `label`, and `provider`
+- `KNOWN_MODELS: KnownModel[]` — static list of models with `id`, `label`, and `provider`
 - `modelLabel(modelId: string): string` — returns the human-readable label for a model ID, falling back to the raw ID for unknown models
 
-When building a model `Select` dropdown, group items by provider using MUI `ListSubheader`:
+Use `modelLabel()` in **read-only** views so that saved model IDs render gracefully even if they are no longer in the live API response.
+
+**Maintenance:** When a model is retired, add a deprecation comment rather than removing it from the array so that existing member records still display correctly.
+
+### Live model loading
+
+**Path:** `src/lib/anthropic.ts`, `src-tauri/src/anthropic.rs`
+
+`listAnthropicModels()` calls the Tauri `list_anthropic_models` command, which hits `GET /v1/models` on the Anthropic API using the key stored in the OS Keychain. It returns an empty array when no key is configured or the key is invalid — the frontend treats an empty result as "no models from this provider" without distinguishing the two cases.
+
+The pattern for the model `Select` in edit mode:
 
 ```tsx
-import { KNOWN_MODELS } from "../lib/models";
+import { listAnthropicModels, type AnthropicModel } from "../lib/anthropic";
 
-<Select value={model} label="Model" onChange={...}>
-  {PROVIDERS.map((provider) => [
-    <ListSubheader key={provider.key}>{provider.label}</ListSubheader>,
-    ...KNOWN_MODELS.filter((m) => m.provider === provider.key).map((m) => (
-      <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
-    )),
-  ])}
+// In the component, load on mount alongside other data:
+const [anthropicModels] = await Promise.all([listAnthropicModels(), ...]);
+
+// Build groups — only include providers that returned models:
+const groups: ProviderModels[] = [];
+if (anthropicModels.length > 0) {
+  groups.push({ provider: "anthropic", label: "Anthropic", models: anthropicModels });
+}
+
+// Render:
+<Select value={draft.model} label="Model" onChange={...}>
+  {groups.length === 0 ? (
+    <MenuItem value="" disabled>Input API keys to view available models</MenuItem>
+  ) : (
+    groups.map((group) => [
+      <ListSubheader key={group.provider}>{group.label}</ListSubheader>,
+      ...group.models.map((m) => (
+        <MenuItem key={m.id} value={m.id}>{m.displayName}</MenuItem>
+      )),
+    ])
+  )}
 </Select>
 ```
 
-When displaying a model name in read-only contexts, use `modelLabel(member.model)` — this gracefully handles retired model IDs that no longer appear in `KNOWN_MODELS`.
-
-**Maintenance:** When a model is retired, mark it deprecated in a code comment rather than removing it from the array. Filter deprecated models out of the creation `Select` but keep them visible in read-only views so existing member records display correctly.
+**Extending to new providers:** Add a `listXxxModels()` function in `src/lib/xxx.ts`, a corresponding Tauri command in `src-tauri/src/xxx.rs`, register it in `lib.rs`, then push the results into `groups` in `MemberPage` following the same pattern as Anthropic.

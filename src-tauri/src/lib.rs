@@ -1,3 +1,4 @@
+mod anthropic;
 mod keychain;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -29,6 +30,7 @@ pub fn run() {
             keychain::set_api_key,
             keychain::get_api_key,
             keychain::delete_api_key,
+            anthropic::list_anthropic_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

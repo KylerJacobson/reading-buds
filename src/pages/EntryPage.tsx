@@ -7,6 +7,7 @@ import {
   Alert,
   AppBar,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Container,
@@ -28,6 +29,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ForumIcon from "@mui/icons-material/Forum";
 import GroupsIcon from "@mui/icons-material/Groups";
 import SaveIcon from "@mui/icons-material/Save";
 import ArticleIcon from "@mui/icons-material/Article";
@@ -35,8 +37,8 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { CreateEntryInput, EntryType, ReadingEntry } from "../types/entry";
 import { createEntry, deleteEntry, getEntry, updateEntry } from "../lib/db/entries";
-import { listClubs } from "../lib/db/clubs";
-import type { Club } from "../types/club";
+import { getClubWithMembers, listClubs } from "../lib/db/clubs";
+import type { Club, ClubWithMembers } from "../types/club";
 
 const EMPTY_DRAFT: CreateEntryInput = {
   type: "book",
@@ -70,6 +72,8 @@ export function EntryPage() {
   const [saving, setSaving] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [clubs, setClubs] = useState<Club[]>([]);
+  // Populated when the entry has a clubId so the view can check member count.
+  const [clubWithMembers, setClubWithMembers] = useState<ClubWithMembers | null>(null);
 
   // Load existing entry from DB when not in create mode.
   useEffect(() => {
@@ -92,6 +96,16 @@ export function EntryPage() {
       // Non-fatal: club selector will just be empty
     });
   }, []);
+
+  // When the entry's club changes, reload the full club+members record so the
+  // "Generate Discussion" button can check whether the club has any members.
+  useEffect(() => {
+    const clubId = (draft as ReadingEntry).clubId;
+    if (!clubId) { setClubWithMembers(null); return; }
+    getClubWithMembers(clubId)
+      .then(setClubWithMembers)
+      .catch(() => setClubWithMembers(null));
+  }, [(draft as ReadingEntry).clubId]);
 
   async function handleSave() {
     setSaving(true);
@@ -193,7 +207,7 @@ export function EntryPage() {
         )}
 
         {isViewMode ? (
-          <ViewContent entry={draft as ReadingEntry} clubs={clubs} />
+          <ViewContent entry={draft as ReadingEntry} clubs={clubs} clubWithMembers={clubWithMembers} />
         ) : (
           <EditContent draft={draft} setField={setField} clubs={clubs} />
         )}
@@ -214,8 +228,18 @@ export function EntryPage() {
 // Sub-components — kept in the same file since they're only used here.
 // ---------------------------------------------------------------------------
 
-function ViewContent({ entry, clubs }: { entry: ReadingEntry; clubs: Club[] }) {
+function ViewContent({
+  entry,
+  clubs,
+  clubWithMembers,
+}: {
+  entry: ReadingEntry;
+  clubs: Club[];
+  clubWithMembers: ClubWithMembers | null;
+}) {
   const associatedClub = entry.clubId ? clubs.find((c) => c.id === entry.clubId) : undefined;
+  // Only show the discussion button when the associated club has at least one member.
+  const canGenerateDiscussion = (clubWithMembers?.members.length ?? 0) > 0;
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -300,6 +324,22 @@ function ViewContent({ entry, clubs }: { entry: ReadingEntry; clubs: Club[] }) {
           </Typography>
         )}
       </Box>
+
+      {/* Generate Discussion — only shown when the associated club has members */}
+      {canGenerateDiscussion && (
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<ForumIcon />}
+            onClick={() => {
+              // TODO: wire up discussion generation
+            }}
+          >
+            Generate Discussion
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

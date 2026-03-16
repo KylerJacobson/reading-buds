@@ -23,16 +23,18 @@ import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { createMember, deleteMember, getMember, updateMember } from "../lib/db/members";
-import { KNOWN_MODELS } from "../lib/models";
+import { listAnthropicModels, type AnthropicModel } from "../lib/anthropic";
+import { KNOWN_MODELS, modelLabel } from "../lib/models";
 import type { Member } from "../types/club";
 
 type Mode = "view" | "edit";
 
-const PROVIDERS: { key: string; label: string }[] = [
-  { key: "anthropic", label: "Anthropic" },
-  { key: "openai",    label: "OpenAI" },
-  { key: "google",    label: "Google" },
-];
+/** Models grouped by provider, built from live API responses. */
+interface ProviderModels {
+  provider: string;
+  label: string;
+  models: AnthropicModel[];
+}
 
 const DEFAULT_MODEL = KNOWN_MODELS[0].id;
 
@@ -44,21 +46,43 @@ export function MemberPage() {
   const [mode, setMode] = useState<Mode>(isNew ? "edit" : "view");
   const [member, setMember] = useState<Member | null>(null);
   const [draft, setDraft] = useState({ name: "", bio: "", model: DEFAULT_MODEL });
-  const [loading, setLoading] = useState(!isNew);
+  // Always start loading — we always need to fetch available models.
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // Non-empty provider groups from live API responses.
+  const [availableModels, setAvailableModels] = useState<ProviderModels[]>([]);
 
   useEffect(() => {
-    if (isNew) return;
-    getMember(id!)
-      .then((m) => {
-        if (!m) { setError("Member not found."); return; }
-        setMember(m);
-        setDraft({ name: m.name, bio: m.bio, model: m.model });
-      })
-      .catch((err) => setError(String(err)))
-      .finally(() => setLoading(false));
+    async function load() {
+      try {
+        // Fetch member data and all provider model lists in parallel.
+        const [anthropicModels, fetchedMember] = await Promise.all([
+          listAnthropicModels(),
+          isNew ? Promise.resolve(null) : getMember(id!),
+        ]);
+
+        if (!isNew) {
+          if (!fetchedMember) { setError("Member not found."); return; }
+          setMember(fetchedMember);
+          setDraft({ name: fetchedMember.name, bio: fetchedMember.bio, model: fetchedMember.model });
+        }
+
+        // Build grouped model list — only include providers that returned models.
+        // As OpenAI / Google endpoints are added, push their results here too.
+        const groups: ProviderModels[] = [];
+        if (anthropicModels.length > 0) {
+          groups.push({ provider: "anthropic", label: "Anthropic", models: anthropicModels });
+        }
+        setAvailableModels(groups);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, [id, isNew]);
 
   async function handleSave() {
@@ -149,7 +173,8 @@ export function MemberPage() {
             <Box>
               <Typography variant="h4" fontWeight={700}>{member?.name}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {KNOWN_MODELS.find((m) => m.id === member?.model)?.label ?? member?.model}
+                {/* modelLabel falls back to the raw ID for models not in the static list */}
+                {member?.model ? modelLabel(member.model) : ""}
               </Typography>
             </Box>
             <Box>
@@ -185,12 +210,19 @@ export function MemberPage() {
                 label="Model"
                 onChange={(e) => setDraft((d) => ({ ...d, model: e.target.value }))}
               >
-                {PROVIDERS.map((provider) => [
-                  <ListSubheader key={provider.key}>{provider.label}</ListSubheader>,
-                  ...KNOWN_MODELS.filter((m) => m.provider === provider.key).map((m) => (
-                    <MenuItem key={m.id} value={m.id}>{m.label}</MenuItem>
-                  )),
-                ])}
+                {availableModels.length === 0 ? (
+                  // No provider returned models — prompt the user to add API keys.
+                  <MenuItem value="" disabled>
+                    Input API keys to view available models
+                  </MenuItem>
+                ) : (
+                  availableModels.map((group) => [
+                    <ListSubheader key={group.provider}>{group.label}</ListSubheader>,
+                    ...group.models.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>{m.displayName}</MenuItem>
+                    )),
+                  ])
+                )}
               </Select>
             </FormControl>
 

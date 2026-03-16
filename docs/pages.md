@@ -221,9 +221,13 @@ Detail view for a single club member (LLM persona). Handles create (`/members/ne
 
 ### Modes
 
-**View mode** — shows name, assigned model label, and bio (system prompt).
+**View mode** — shows name, assigned model label (via `modelLabel()` with raw ID fallback), and bio (system prompt).
 
-**Edit mode** — name text field, grouped model `Select` (grouped by provider), and multiline bio field.
+**Edit mode** — name text field, live model `Select` grouped by provider, and multiline bio field.
+
+### Model selector
+
+On mount the page calls `listAnthropicModels()` (and future provider functions) in parallel with the member fetch. Models are grouped into `ProviderModels[]` — only providers that returned at least one model are included. If all providers return empty arrays (no valid API keys), the `Select` shows a single disabled item: _"Input API keys to view available models"_.
 
 ### State
 
@@ -232,7 +236,14 @@ Detail view for a single club member (LLM persona). Handles create (`/members/ne
 | `mode` | `"view" \| "edit"` | Current display mode |
 | `member` | `Member \| null` | Loaded member data |
 | `draft` | `{ name, bio, model }` | Editable copy of member fields |
+| `availableModels` | `ProviderModels[]` | Live model groups from provider APIs |
+| `loading` | `boolean` | True until both member and models are fetched |
 | `confirmDeleteOpen` | `boolean` | Controls the delete confirmation dialog |
+
+### Data
+
+- All data (member + models) is fetched in a single `Promise.all` on mount so there is only one loading state.
+- `loading` starts as `true` for both new and existing members since models always need to be fetched.
 
 ### Navigation
 
